@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Store - Experiencia Inmersiva</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- CONTENEDOR DE IMÁGENES ANIMADAS FLOTANTES -->
+    <div id="animated-bg-overlay" class="floating-images-container"></div>
+    
+    <!-- EFECTOS DE LUCES NEÓN DE FONDO -->
+    <div class="neon-grid-background"></div>
+    <div class="glowing-orb orb-1"></div>
+    <div class="glowing-orb orb-2"></div>
+
+    <div class="app-container">
+        <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+        <header class="top-navbar">
+            <div class="logo-section" onclick="ejecutarAccionPestana('inicio')" style="cursor: pointer;">
+                <h2>NEON<span>STORE</span></h2>
+            </div>
+            
+            <nav class="nav-container">
+                <button class="nav-home-btn" onclick="ejecutarAccionPestana('inicio')">🏠 Inicio</button>
+
+                <!-- SUBMENÚ 1: MERCANCÍA -->
+                <div class="dropdown">
+                    <button class="dropdown-btn" onclick="toggleDropdown('drop-mercancia')">📦 Mercancía ▼</button>
+                    <div id="drop-mercancia" class="dropdown-content">
+                        <a href="#" onclick="ejecutarAccionSeccion('Anillos')">💍 Anillos</a>
+                        <a href="#" onclick="ejecutarAccionSeccion('Collares')">📿 Collares</a>
+                        <a href="#" onclick="ejecutarAccionSeccion('Pulseras')">📿 Pulseras</a>
+                        <a href="#" onclick="ejecutarAccionSeccion('Posters Anime')">🖼️ Posters Anime</a>
+                    </div>
+                </div>
+
+                <!-- SUBMENÚ 2: OPERACIONES -->
+                <div class="dropdown">
+                    <button class="dropdown-btn" onclick="toggleDropdown('drop-operaciones')">⚙️ Operaciones ▼</button>
+                    <div id="drop-operaciones" class="dropdown-content">
+                        <a href="#" onclick="ejecutarAccionPestana('nuevo-producto')">➕ Agregar Artículo</a>
+                        <a href="#" onclick="ejecutarAccionPestana('pedidos')">🛒 Registrar Pedido</a>
+                        <a href="#" onclick="ejecutarAccionPestana('historial')">📋 Historial de Órdenes</a>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <!-- ÁREA CENTRAL DE CONTENIDO -->
+        <main class="main-content">
+            
+            <!-- NUEVA SECCIÓN DE INICIO (HOME) -->
+            <section id="pestana-inicio" class="tab-content active">
+                <div class="welcome-hero">
+                    <div class="hero-tag">NUEVA ERA</div>
+                    <h1 class="hero-title">BIENVENIDO AL CENTRO DE CONTROL</h1>
+                    <p class="hero-subtitle">Gestiona tu inventario exclusivo, procesa órdenes en tiempo real y monitorea el flujo de mercancía con una interfaz optimizada de alta velocidad.</p>
+                    <div class="hero-actions">
+                        <button class="btn-hero-primary" onclick="ejecutarAccionSeccion('Anillos')">Ver Mercancía 📦</button>
+                        <button class="btn-hero-secondary" onclick="ejecutarAccionPestana('pedidos')">Registrar Pedido 🛒</button>
+                    </div>
+                </div>
+
+                <div class="dashboard-stats-grid">
+                    <div class="stat-glass-card" onclick="ejecutarAccionPestana('historial')">
+                        <div class="stat-icon pink">📊</div>
+                        <div class="stat-info">
+                            <span id="stat-total-pedidos">0</span>
+                            <p>Órdenes Registradas</p>
+                        </div>
+                    </div>
+                    <div class="stat-glass-card">
+                        <div class="stat-icon green">💰</div>
+                        <div class="stat-info">
+                            <span id="stat-ingresos-totales">$0.00</span>
+                            <p>Ingresos Generados</p>
+                        </div>
+                    </div>
+                    <div class="stat-glass-card">
+                        <div class="stat-icon cyan">⚡</div>
+                        <div class="stat-info">
+                            <span id="stat-total-productos">0</span>
+                            <p>Artículos en Sistema</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- SECCIONES DE ARTÍCULOS -->
+            <section id="pestana-secciones" class="tab-content">
+                <div id="banner-representativo" class="category-banner">
+                    <h1 id="titulo-seccion-actual">Sección Anillos</h1>
+                    <p id="descripcion-seccion-actual">Inventario exclusivo del emprendimiento.</p>
+                </div>
+                <div class="products-grid" id="contenedor-productos-seccion"></div>
+            </section>
+
+            <!-- AGREGAR / EDITAR PRODUCTO -->
+            <section id="pestana-nuevo-producto" class="tab-content">
+                <div class="header-section">
+                    <h1 id="formulario-producto-titulo" class="neon-text-pink">Agregar Artículo al Sistema</h1>
+                    <p>Introduce las propiedades y asígnalo a su sección correspondiente.</p>
+                </div>
+                <div class="form-container">
+                    <form id="form-producto" onsubmit="guardarProducto(event)">
+                        <input type="hidden" id="edit-prod-id">
+                        <div class="form-group">
+                            <label>Nombre del Artículo</label>
+                            <input type="text" id="prod-nombre" required placeholder="Ej. Pulsera de Hilo Personalizada">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sección de Destino</label>
+                                <select id="prod-categoria" required>
+                                    <option value="Anillos">Anillos</option>
+                                    <option value="Collares">Collares</option>
+                                    <option value="Pulseras">Pulseras</option>
+                                    <option value="Posters Anime">Posters Anime</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Precio Unitario ($)</label>
+                                <input type="number" id="prod-precio" step="0.01" required placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Cantidad Disponible en Stock</label>
+                                <input type="number" id="prod-stock" required min="0" placeholder="Ej. 20">
+                            </div>
+                            <div class="form-group">
+                                <label>Imagen del Producto</label>
+                                <input type="text" id="prod-imagen" placeholder="Pega URL o usa el buscador">
+                                <input type="file" id="prod-file" accept="image/*" onchange="convertirImagenBase64()">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary-neon">Guardar en Sección</button>
+                            <button type="button" class="btn-secondary-neon" onclick="limpiarFormularioProducto()">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- REGISTRAR ORDEN -->
+            <section id="pestana-pedidos" class="tab-content">
+                <div class="header-section">
+                    <h1 class="neon-text-blue">Crear Nueva Orden de Cliente</h1>
+                    <p>Los subtotales se calculan de manera inmediata al ingresar productos.</p>
+                </div>
+                <div class="form-container">
+                    <form id="form-pedido" onsubmit="guardarPedido(event)">
+                        <h3>Datos Personales</h3>
+                        <div class="form-group">
+                            <label>Nombre Completo</label>
+                            <input type="text" id="ped-cliente" required placeholder="Cliente Comprador">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Número de Teléfono</label>
+                                <input type="tel" id="ped-telefono" placeholder="Ej. 809-555-0199">
+                            </div>
+                            <div class="form-group">
+                                <label>Instagram</label>
+                                <input type="text" id="ped-instagram" placeholder="Ej. @usuario">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Fecha de Captura</label>
+                                <input type="date" id="ped-fecha" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Estado del Flujo</label>
+                                <select id="ped-estado">
+                                    <option value="Pendiente">🟡 Pendiente</option>
+                                    <option value="En Proceso">🔵 En Proceso</option>
+                                    <option value="Entregado">🟢 Entregado</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h3 style="margin-top: 25px;">Selección de Artículos</h3>
+                        <div class="item-selector-box">
+                            <div class="form-row" style="align-items: flex-end;">
+                                <div class="form-group" style="flex: 2;">
+                                    <label>Buscar Artículo Disponible</label>
+                                    <select id="ped-select-producto" onchange="actualizarMaximoStock()"></select>
+                                </div>
+                                <div class="form-group" style="max-width: 100px;">
+                                    <label>Cantidad</label>
+                                    <input type="number" id="ped-cantidad" value="1" min="1">
+                                </div>
+                                <button type="button" class="btn-primary-neon" style="height: 42px; padding: 0 20px;" onclick="agregarProductoAlPedido()">+</button>
+                            </div>
+                            <small id="stock-disponible-label" style="color: var(--neon-cyan); font-weight: bold; display: block; margin-top: 8px;"></small>
+                        </div>
+
+                        <table class="neon-table">
+                            <thead>
+                                <tr>
+                                    <th>Artículo</th>
+                                    <th>Precio</th>
+                                    <th>Cantidad</th>
+                                    <th>Subtotal</th>
+                                    <th>Quitar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-articulos-pedido"></tbody>
+                        </table>
+
+                        <div class="total-box">
+                            <span>Monto Total General:</span>
+                            <span id="pedido-total-dinamico" class="neon-text-green">$0.00</span>
+                        </div>
+                        <button type="submit" class="btn-submit-order">Registrar y Procesar Pedido</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- HISTORIAL DE PEDIDOS -->
+            <section id="pestana-historial" class="tab-content">
+                <div class="header-section">
+                    <h1 class="neon-text-green">Historial General de Órdenes</h1>
+                    <p>Monitorea estados de entrega y registra tiempos precisos de despacho.</p>
+                </div>
+                <div class="table-container">
+                    <table class="neon-table">
+                        <thead>
+                            <tr>
+                                <th>Información del Cliente</th>
+                                <th>Fecha Compra</th>
+                                <th>Artículos y Total</th>
+                                <th>Modificar Estado</th>
+                                <th>Control de Tiempos</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historial-pedidos-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
