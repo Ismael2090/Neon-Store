@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcrypt');
 const sqlite3 = require('sqlite3').verbose();
 
 const DB_PATH = path.join(__dirname, 'data.sqlite');
@@ -27,7 +28,6 @@ db.serialize(() => {
     }
     console.log('Schema aplicado correctamente.');
 
-    // Insertar datos de ejemplo solo si la tabla products está vacía
     db.get('SELECT COUNT(1) AS cnt FROM products', (err, row) => {
       if (err) {
         console.error(err);
@@ -42,6 +42,22 @@ db.serialize(() => {
         insert.finalize(() => console.log('Productos de ejemplo insertados.'));
       } else {
         console.log('Productos ya existentes, no se insertaron ejemplos.');
+      }
+    });
+
+    db.get('SELECT COUNT(1) AS cnt FROM users', (err, row) => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+
+      if (row && row.cnt === 0) {
+        const passwordHash = bcrypt.hashSync('Neon1234', 10);
+        const insertUser = db.prepare('INSERT INTO users (username, password_hash, full_name, photo_url, provider) VALUES (?, ?, ?, ?, ?)');
+        insertUser.run('neonadmin', passwordHash, 'Administrador Neon', '', 'local');
+        insertUser.finalize(() => console.log('Usuario de ejemplo creado: neonadmin / Neon1234'));
+      } else {
+        console.log('Usuarios existentes, no se creó el usuario de ejemplo.');
       }
     });
   });

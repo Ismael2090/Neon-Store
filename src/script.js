@@ -11,6 +11,9 @@ let carritoActual = [];
 let seccionActiva = "Anillos";
 let imagenBase64Temporal = "";
 
+const authState = { user: null };
+const authSelectors = {};
+
 // Sistema de físicas del fondo animado
 let elementosFlotantes = [];
 let loopAnimacionFondo = null;
@@ -40,9 +43,18 @@ const metadatosSecciones = {
 
 document.addEventListener('DOMContentLoaded', () => {
     configurarFechaActual();
-    actualizarEstadisticasInicio();
-    cambiarPestana('inicio'); // Entra al Inicio por defecto
-    
+    authSelectors.authScreen = document.getElementById('auth-screen');
+    authSelectors.appContainer = document.querySelector('.app-container');
+    authSelectors.loginSection = document.getElementById('auth-login');
+    authSelectors.registerSection = document.getElementById('auth-register');
+    authSelectors.profileEditor = document.getElementById('profile-editor-panel');
+    authSelectors.profileUsername = document.getElementById('profile-username-edit');
+    authSelectors.profileFullName = document.getElementById('profile-fullname-edit');
+    authSelectors.profilePhoto = document.getElementById('profile-photo-edit');
+
+    mostrarAuthSection('login');
+    cargarUsuarioActual();
+
     window.onclick = function(event) {
         if (!event.target.matches('.dropdown-btn')) {
             cerrarTodosLosDropdowns();
@@ -54,6 +66,159 @@ function guardarDatos() {
     localStorage.setItem('productos_neon', JSON.stringify(productos));
     localStorage.setItem('pedidos_neon', JSON.stringify(pedidos));
     actualizarEstadisticasInicio();
+}
+
+async function cargarUsuarioActual() {
+    try {
+        const res = await fetch('/auth/me', { credentials: 'include' });
+        const data = await res.json();
+        if (data.status === 'success' && data.user) {
+            authState.user = data.user;
+            mostrarApp();
+        } else {
+            mostrarAuth();
+        }
+    } catch (error) {
+        mostrarAuth();
+    }
+}
+
+function mostrarAuth() {
+    authSelectors.authScreen.classList.remove('hidden');
+    authSelectors.appContainer.classList.add('hidden');
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+}
+
+function mostrarApp() {
+    authSelectors.authScreen.classList.add('hidden');
+    authSelectors.appContainer.classList.remove('hidden');
+    actualizarEstadisticasInicio();
+    refreshUserProfile();
+    cambiarPestana('inicio');
+}
+
+function mostrarAuthSection(section) {
+    const loginButton = document.getElementById('btn-login-switch');
+    const registerButton = document.getElementById('btn-register-switch');
+    if (section === 'register') {
+        authSelectors.loginSection.classList.remove('active');
+        authSelectors.registerSection.classList.add('active');
+        loginButton.classList.remove('active');
+        registerButton.classList.add('active');
+    } else {
+        authSelectors.loginSection.classList.add('active');
+        authSelectors.registerSection.classList.remove('active');
+        loginButton.classList.add('active');
+        registerButton.classList.remove('active');
+    }
+}
+
+async function submitLogin(event) {
+    event.preventDefault();
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const loginError = document.getElementById('login-error');
+    loginError.textContent = '';
+
+    try {
+        const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ username, password })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            loginError.textContent = result.error || 'Error al iniciar sesión';
+            return;
+        }
+        authState.user = result.user;
+        mostrarApp();
+    } catch (err) {
+        loginError.textContent = 'Error de conexión. Intenta nuevamente.';
+    }
+}
+
+async function submitRegister(event) {
+    event.preventDefault();
+    const username = document.getElementById('register-username').value.trim();
+    const fullName = document.getElementById('register-fullname').value.trim();
+    const password = document.getElementById('register-password').value;
+    const photoUrl = document.getElementById('register-photo').value.trim();
+    const registerError = document.getElementById('register-error');
+    registerError.textContent = '';
+
+    try {
+        const response = await fetch('/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ username, fullName, password, photoUrl })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            registerError.textContent = result.error || 'Error al crear cuenta';
+            return;
+        }
+        authState.user = result.user;
+        mostrarApp();
+    } catch (err) {
+        registerError.textContent = 'Error de conexión. Intenta nuevamente.';
+    }
+}
+
+async function logout() {
+    try {
+        await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (_) {
+        // ignore
+    }
+    authState.user = null;
+    mostrarAuth();
+}
+
+function refreshUserProfile() {
+    if (!authState.user) return;
+    const profilePhoto = document.getElementById('profile-photo');
+    const profileName = document.getElementById('profile-name');
+    profilePhoto.src = authState.user.photoUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100';
+    profileName.textContent = authState.user.fullName || authState.user.username;
+
+    if (authSelectors.profileUsername) authSelectors.profileUsername.value = authState.user.username;
+    if (authSelectors.profileFullName) authSelectors.profileFullName.value = authState.user.fullName || '';
+    if (authSelectors.profilePhoto) authSelectors.profilePhoto.value = authState.user.photoUrl || '';
+}
+
+function toggleProfileEditor() {
+    authSelectors.profileEditor.classList.toggle('hidden');
+}
+
+async function guardarPerfil(event) {
+    event.preventDefault();
+    const username = authSelectors.profileUsername.value.trim();
+    const fullName = authSelectors.profileFullName.value.trim();
+    const photoUrl = authSelectors.profilePhoto.value.trim();
+    const profileError = document.getElementById('profile-error');
+    profileError.textContent = '';
+
+    try {
+        const response = await fetch('/auth/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ username, fullName, photoUrl })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            profileError.textContent = result.error || 'No se pudo actualizar el perfil';
+            return;
+        }
+        authState.user = result.user;
+        refreshUserProfile();
+        toggleProfileEditor();
+    } catch (err) {
+        profileError.textContent = 'Error de conexión. Intenta nuevamente.';
+    }
 }
 
 // --- ENGINE DE FOTOS ANIMADAS FLOTANDO EN EL FONDO ---

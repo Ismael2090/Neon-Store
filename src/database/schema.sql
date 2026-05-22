@@ -34,3 +34,18 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date);
+
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT,
+  full_name TEXT NOT NULL,
+  photo_url TEXT,
+  provider TEXT NOT NULL DEFAULT 'local',
+  provider_id TEXT,
+  created_at DATETIME DEFAULT (datetime('now')),
+  UNIQUE(provider, provider_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_provider ON users(provider);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);

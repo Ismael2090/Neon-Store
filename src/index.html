@@ -15,7 +15,62 @@
     <div class="glowing-orb orb-1"></div>
     <div class="glowing-orb orb-2"></div>
 
-    <div class="app-container">
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-card">
+            <div class="auth-switch">
+                <button id="btn-login-switch" class="auth-switch-btn active" onclick="mostrarAuthSection('login')">Iniciar Sesión</button>
+                <button id="btn-register-switch" class="auth-switch-btn" onclick="mostrarAuthSection('register')">Registrarse</button>
+            </div>
+
+            <div id="auth-login" class="auth-form active">
+                <h2>Bienvenido de nuevo</h2>
+                <form onsubmit="submitLogin(event)">
+                    <div class="form-group">
+                        <label>Usuario</label>
+                        <input type="text" id="login-username" required placeholder="Ej. neonuser">
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña</label>
+                        <input type="password" id="login-password" required placeholder="Contraseña segura">
+                    </div>
+                    <div id="login-error" class="auth-error"></div>
+                    <button type="submit" class="btn-hero-primary auth-submit">Entrar</button>
+                </form>
+            </div>
+
+            <div id="auth-register" class="auth-form">
+                <h2>Crea tu cuenta</h2>
+                <form onsubmit="submitRegister(event)">
+                    <div class="form-group">
+                        <label>Nombre de usuario</label>
+                        <input type="text" id="register-username" required placeholder="Ej. neoncreator">
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre completo</label>
+                        <input type="text" id="register-fullname" required placeholder="Ej. Enmanuel Rivera">
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña</label>
+                        <input type="password" id="register-password" required placeholder="Contraseña segura">
+                    </div>
+                    <div class="form-group">
+                        <label>URL de foto de perfil</label>
+                        <input type="text" id="register-photo" placeholder="Opcional">
+                    </div>
+                    <div id="register-error" class="auth-error"></div>
+                    <button type="submit" class="btn-hero-primary auth-submit">Crear cuenta</button>
+                </form>
+            </div>
+
+            <div class="auth-divider">O inicia con</div>
+            <div class="social-row">
+                <button type="button" class="btn-social google" onclick="window.location.href='/auth/google'">Google</button>
+                <button type="button" class="btn-social facebook" onclick="window.location.href='/auth/facebook'">Facebook</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container hidden">
         <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
         <header class="top-navbar">
             <div class="logo-section" onclick="ejecutarAccionPestana('inicio')" style="cursor: pointer;">
@@ -33,6 +88,20 @@
                         <a href="#" onclick="ejecutarAccionSeccion('Collares')">📿 Collares</a>
                         <a href="#" onclick="ejecutarAccionSeccion('Pulseras')">📿 Pulseras</a>
                         <a href="#" onclick="ejecutarAccionSeccion('Posters Anime')">🖼️ Posters Anime</a>
+                    </div>
+                </div>
+
+                <!-- PERFIL DE USUARIO -->
+                <div class="user-profile-widget" id="user-profile-widget">
+                    <div class="profile-thumb-wrapper">
+                        <img id="profile-photo" class="profile-photo" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100" alt="Perfil">
+                    </div>
+                    <div class="profile-info">
+                        <span id="profile-name">Invitado</span>
+                        <div class="profile-actions-top">
+                            <button class="btn-secondary-neon btn-small" type="button" onclick="toggleProfileEditor()">Editar perfil</button>
+                            <button class="btn-secondary-neon btn-small" type="button" onclick="logout()">Salir</button>
+                        </div>
                     </div>
                 </div>
 
@@ -244,6 +313,33 @@
             </section>
 
         </main>
+    </div>
+    <div id="profile-editor-panel" class="profile-editor-panel hidden">
+        <div class="profile-editor-card">
+            <div class="profile-editor-header">
+                <h2>Editar perfil</h2>
+                <button class="btn-secondary-neon btn-small" type="button" onclick="toggleProfileEditor()">Cerrar</button>
+            </div>
+            <form id="profile-form" onsubmit="guardarPerfil(event)">
+                <div class="form-group">
+                    <label>Nombre de usuario</label>
+                    <input type="text" id="profile-username-edit" required>
+                </div>
+                <div class="form-group">
+                    <label>Nombre completo</label>
+                    <input type="text" id="profile-fullname-edit" required>
+                </div>
+                <div class="form-group">
+                    <label>URL de foto de perfil</label>
+                    <input type="text" id="profile-photo-edit" placeholder="https://...">
+                </div>
+                <div id="profile-error" class="auth-error"></div>
+                <div class="profile-actions">
+                    <button type="button" class="btn-secondary-neon" onclick="toggleProfileEditor()">Cancelar</button>
+                    <button type="submit" class="btn-hero-primary">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>

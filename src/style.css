@@ -266,3 +266,195 @@ body {
 .neon-text-pink { color: var(--neon-pink); text-shadow: 0 0 5px var(--neon-pink); }
 .neon-text-blue { color: var(--neon-cyan); text-shadow: 0 0 5px var(--neon-cyan); }
 .neon-text-green { color: var(--neon-green); text-shadow: 0 0 5px var(--neon-green); }
+
+.hidden { display: none !important; }
+
+.auth-screen {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at top, rgba(0, 255, 255, 0.16), transparent 30%),
+                radial-gradient(circle at bottom right, rgba(255, 0, 127, 0.14), transparent 20%),
+                var(--bg-dark-core);
+    position: relative;
+    z-index: 10;
+    padding: 20px;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 520px;
+    background: rgba(8, 10, 19, 0.94);
+    border: 1px solid rgba(0, 240, 255, 0.14);
+    border-radius: 26px;
+    padding: 32px;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45);
+}
+
+.auth-switch {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.auth-switch-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-main);
+    padding: 14px 0;
+    font-weight: 700;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.auth-switch-btn.active {
+    background: rgba(0, 240, 255, 0.12);
+    border-color: var(--neon-cyan);
+}
+
+.auth-form { display: none; }
+.auth-form.active { display: block; }
+.auth-form h2 { margin-bottom: 18px; font-size: 28px; }
+.auth-form .form-group { margin-bottom: 18px; }
+.auth-form input { width: 100%; }
+
+.auth-error {
+    color: #ff5a82;
+    margin-bottom: 16px;
+    font-size: 14px;
+    min-height: 20px;
+}
+
+.auth-submit {
+    width: 100%;
+    margin-top: 8px;
+}
+
+.auth-divider {
+    text-align: center;
+    color: var(--text-dark-muted);
+    margin: 24px 0 14px;
+    position: relative;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 42%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.auth-divider::before { left: 0; }
+.auth-divider::after { right: 0; }
+
+.social-row {
+    display: grid;
+    gap: 12px;
+}
+
+.btn-social {
+    border: none;
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.btn-social:hover { transform: translateY(-2px); }
+.btn-social.google { background: #4285f4; color: white; }
+.btn-social.facebook { background: #3b5998; color: white; }
+
+.user-profile-widget {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.profile-thumb-wrapper {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 0 16px rgba(0, 255, 255, 0.08);
+}
+
+.profile-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.profile-info span {
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+}
+
+.profile-actions-top {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-small {
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.profile-editor-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 420px;
+    max-width: 100%;
+    height: 100%;
+    background: rgba(4, 5, 14, 0.98);
+    backdrop-filter: blur(18px);
+    border-left: 1px solid rgba(0, 240, 255, 0.14);
+    padding: 28px;
+    z-index: 1100;
+    overflow-y: auto;
+}
+
+.profile-editor-card {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.profile-editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.profile-editor-panel .form-group { margin-bottom: 16px; }
+
+.profile-editor-panel input { width: 100%; }
