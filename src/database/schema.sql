@@ -1,0 +1,36 @@
+-- Esquema de la base de datos para Neon Store
+
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS products (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  price REAL NOT NULL DEFAULT 0,
+  stock INTEGER NOT NULL DEFAULT 0,
+  image TEXT,
+  created_at DATETIME DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_name TEXT NOT NULL,
+  phone TEXT,
+  instagram TEXT,
+  date DATETIME DEFAULT (datetime('now')),
+  status TEXT DEFAULT 'Pendiente',
+  total REAL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 1,
+  price REAL NOT NULL DEFAULT 0,
+  FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date);
