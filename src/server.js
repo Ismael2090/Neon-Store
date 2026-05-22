@@ -12,7 +12,9 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+// Servir archivos estáticos desde la carpeta actual (__dirname),
+// así `style.css` y `script.js` estarán accesibles en /style.css y /script.js
+app.use(express.static(path.join(__dirname, '.')));
 
 // Routes
 app.get('/', (req, res) => {
