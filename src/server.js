@@ -54,8 +54,38 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
+
+// DEBUG: simple handler to confirm /api/requests reaches the server
+app.post('/api/requests', (req, res) => {
+  console.log('[DEBUG] received /api/requests');
+  res.json({ status: 'debug', message: 'route received' });
+});
+
 // Security: hide framework fingerprint
 app.disable('x-powered-by');
+
+// Early handler for /requests to ensure client posts are accepted (duplicates allowed)
+app.post('/requests', async (req, res, next) => {
+  try {
+    if (!req.isAuthenticated || !req.isAuthenticated()) {
+      return res.status(401).json({ status: 'error', message: 'No autorizado' });
+    }
+    const { customerName, phone, instagram, items, total } = req.body;
+    if (!customerName || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'Solicitud inválida' });
+    }
+    const insertReq = await run('INSERT INTO order_requests (user_id, username, customer_name, phone, instagram, amount) VALUES (?, ?, ?, ?, ?, ?)',
+      [req.user.id, req.user.username, customerName, phone || '', instagram || '', Number(total) || 0]);
+    const requestId = insertReq.id;
+    await Promise.all((items || []).map(async (it) => {
+      await run('INSERT INTO order_request_items (request_id, product_id, nombre, quantity, price) VALUES (?, ?, ?, ?, ?)',
+        [requestId, it.idProducto || it.productId, it.nombre || '', Number(it.cantidad || it.quantity || 1), Number(it.precioUnitario || it.price || 0)]);
+    }));
+    res.json({ status: 'success', requestId });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Prevent exposing server source files, DB files or other sensitive assets
 const forbiddenPaths = ['/server.js', '/package.json', '/package-lock.json', '/.env'];
@@ -130,6 +160,31 @@ async function initializeDatabaseSchema() {
       created_at DATETIME DEFAULT (datetime('now')),
       UNIQUE(user_id, product_id),
       FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
+    )`);
+
+    // Notifications / order requests tables
+    await run(`CREATE TABLE IF NOT EXISTS order_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      username TEXT,
+      customer_name TEXT NOT NULL,
+      phone TEXT,
+      instagram TEXT,
+      amount REAL DEFAULT 0,
+      status TEXT DEFAULT 'Pendiente',
+      created_at DATETIME DEFAULT (datetime('now')),
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+    )`);
+
+    await run(`CREATE TABLE IF NOT EXISTS order_request_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      request_id INTEGER NOT NULL,
+      product_id INTEGER NOT NULL,
+      nombre TEXT,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      price REAL NOT NULL DEFAULT 0,
+      FOREIGN KEY(request_id) REFERENCES order_requests(id) ON DELETE CASCADE,
       FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
     )`);
 
@@ -259,6 +314,7 @@ app.post('/auth/register', async (req, res, next) => {
     next(err);
   }
 });
+
 
 app.post('/auth/login', (req, res, next) => {
   passport.authenticate('local', (err, user, info) => {
@@ -404,7 +460,105 @@ app.post('/api/orders', ensureAuthenticated, async (req, res, next) => {
         [orderResult.id, item.productId, Number(item.quantity), Number(item.price)]);
       await run('UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?', [Number(item.quantity), item.productId, Number(item.quantity)]);
     }));
+    // If this order was created from a prior request, remove the request
+    if (req.body.requestId) {
+      const reqId = Number(req.body.requestId);
+      if (!Number.isNaN(reqId)) {
+        await run('DELETE FROM order_request_items WHERE request_id = ?', [reqId]);
+        await run('DELETE FROM order_requests WHERE id = ?', [reqId]);
+      }
+    }
     res.json({ status: 'success', orderId: orderResult.id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Order requests (notifications) endpoints
+app.post('/api/requests', ensureAuthenticated, async (req, res, next) => {
+  try {
+    const { customerName, phone, instagram, items, total } = req.body;
+    if (!customerName || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'Solicitud inválida' });
+    }
+    const insertReq = await run('INSERT INTO order_requests (user_id, username, customer_name, phone, instagram, amount) VALUES (?, ?, ?, ?, ?, ?)',
+      [req.user.id, req.user.username, customerName, phone || '', instagram || '', Number(total) || 0]);
+    const requestId = insertReq.id;
+    await Promise.all((items || []).map(async (it) => {
+      await run('INSERT INTO order_request_items (request_id, product_id, nombre, quantity, price) VALUES (?, ?, ?, ?, ?)',
+        [requestId, it.idProducto || it.productId, it.nombre || '', Number(it.cantidad || it.quantity || 1), Number(it.precioUnitario || it.price || 0)]);
+    }));
+    res.json({ status: 'success', requestId });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Alternate routes (without /api) to support clients that hit '/requests'
+app.post('/requests', ensureAuthenticated, async (req, res, next) => {
+  try {
+    const { customerName, phone, instagram, items, total } = req.body;
+    if (!customerName || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'Solicitud inválida' });
+    }
+    const insertReq = await run('INSERT INTO order_requests (user_id, username, customer_name, phone, instagram, amount) VALUES (?, ?, ?, ?, ?, ?)',
+      [req.user.id, req.user.username, customerName, phone || '', instagram || '', Number(total) || 0]);
+    const requestId = insertReq.id;
+    await Promise.all((items || []).map(async (it) => {
+      await run('INSERT INTO order_request_items (request_id, product_id, nombre, quantity, price) VALUES (?, ?, ?, ?, ?)',
+        [requestId, it.idProducto || it.productId, it.nombre || '', Number(it.cantidad || it.quantity || 1), Number(it.precioUnitario || it.price || 0)]);
+    }));
+    res.json({ status: 'success', requestId });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/api/requests', ensureAdmin, async (req, res, next) => {
+  try {
+    const requests = await all('SELECT * FROM order_requests ORDER BY created_at DESC');
+    const withItems = await Promise.all(requests.map(async (r) => {
+      const items = await all('SELECT * FROM order_request_items WHERE request_id = ?', [r.id]);
+      return { ...r, items };
+    }));
+    res.json({ status: 'success', requests: withItems });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/requests', ensureAdmin, async (req, res, next) => {
+  try {
+    const requests = await all('SELECT * FROM order_requests ORDER BY created_at DESC');
+    const withItems = await Promise.all(requests.map(async (r) => {
+      const items = await all('SELECT * FROM order_request_items WHERE request_id = ?', [r.id]);
+      return { ...r, items };
+    }));
+    res.json({ status: 'success', requests: withItems });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.put('/api/requests/:id/status', ensureAdmin, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const { status } = req.body;
+    if (!id || !status) return res.status(400).json({ status: 'error', message: 'Invalid' });
+    await run('UPDATE order_requests SET status = ? WHERE id = ?', [status, id]);
+    res.json({ status: 'success' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.put('/requests/:id/status', ensureAdmin, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const { status } = req.body;
+    if (!id || !status) return res.status(400).json({ status: 'error', message: 'Invalid' });
+    await run('UPDATE order_requests SET status = ? WHERE id = ?', [status, id]);
+    res.json({ status: 'success' });
   } catch (err) {
     next(err);
   }
@@ -526,6 +680,23 @@ app.put('/api/admin/users/:id/role', ensureAdmin, async (req, res, next) => {
 // Serve static assets after API routes so API endpoints are prioritized first
 app.use(express.static(publicDir, { index: false }));
 
+// Debug: listar rutas registradas antes del handler 404
+try {
+  const routeList = [];
+  if (app._router && app._router.stack) {
+    app._router.stack.forEach(mw => {
+      if (mw.route && mw.route.path) {
+        const methods = Object.keys(mw.route.methods).map(m => m.toUpperCase()).join(',');
+        routeList.push(`${methods} ${mw.route.path}`);
+      }
+    });
+  }
+  console.log('Rutas registradas (antes de 404):');
+  routeList.forEach(r => console.log('- ' + r));
+} catch (e) {
+  console.warn('No se pudieron listar rutas antes de 404:', e);
+}
+
 // 404 handler
 app.use((req, res, next) => {
   const error = new Error('Ruta no encontrada');
@@ -544,3 +715,30 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });
+
+// Endpoint de depuración para listar rutas registradas
+app.get('/debug/routes', (req, res) => {
+  try {
+    const routes = (app._router && app._router.stack ? app._router.stack : [])
+      .filter(layer => layer.route)
+      .map(layer => ({ path: layer.route.path, methods: Object.keys(layer.route.methods) }));
+    return res.json({ status: 'success', routes });
+  } catch (e) {
+    return res.status(500).json({ status: 'error', message: 'No se pudieron obtener rutas' });
+  }
+});
+
+// Debug: listar rutas registradas (ayuda a diagnosticar 404 inesperados)
+try {
+  const routeList = [];
+  app._router.stack.forEach(mw => {
+    if (mw.route && mw.route.path) {
+      const methods = Object.keys(mw.route.methods).map(m => m.toUpperCase()).join(',');
+      routeList.push(`${methods} ${mw.route.path}`);
+    }
+  });
+  console.log('Rutas registradas:');
+  routeList.forEach(r => console.log('- ' + r));
+} catch (e) {
+  console.warn('No se pudieron listar rutas:', e);
+}

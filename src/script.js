@@ -103,6 +103,37 @@ function getNotificacionesStorageKey() {
 }
 
 function cargarNotificacionesLocal() {
+    // Admins: load notifications from server so all admins see them
+    if (authState.user?.role === 'admin') {
+        (async () => {
+            try {
+                const resp = await fetch('/api/requests', { credentials: 'include' });
+                const data = await resp.json();
+                if (resp.ok && data.requests) {
+                    notificacionesPedidos = data.requests.map(r => ({
+                        id: r.id,
+                        username: r.username,
+                        customerName: r.customer_name,
+                        phone: r.phone,
+                        instagram: r.instagram,
+                        amount: r.amount,
+                        // keep product id, quantity and price so quick-convert can create orders
+                        items: (r.items || []).map(i => ({ idProducto: i.product_id, nombre: i.nombre, cantidad: i.quantity, precioUnitario: i.price })),
+                        status: r.status,
+                        createdAt: r.created_at
+                    }));
+                } else {
+                    notificacionesPedidos = [];
+                }
+            } catch (err) {
+                notificacionesPedidos = [];
+            }
+            actualizarBadgeNotificaciones();
+            renderizarNotificaciones();
+        })();
+        return;
+    }
+
     try {
         const stored = localStorage.getItem(getNotificacionesStorageKey());
         notificacionesPedidos = stored ? JSON.parse(stored) : [];
@@ -149,10 +180,13 @@ function renderizarNotificaciones() {
         tbody.innerHTML += `
             <tr>
                 <td>
-                    <strong>${notif.customerName}</strong><br>
-                    <span style="font-size:12px; color:var(--text-dark-muted);">${notif.username}</span><br>
-                    <span style="font-size:12px; color:var(--neon-cyan);">📞 ${notif.phone || 'No especificado'}</span><br>
-                    <span style="font-size:12px; color:var(--neon-pink);">📸 ${notif.instagram || 'No especificado'}</span>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <strong>${notif.customerName}</strong>
+                        <span style="background:linear-gradient(90deg,var(--neon-cyan),var(--neon-pink)); padding:2px 8px; border-radius:12px; font-size:12px; color:#000;">Nueva solicitud de ${notif.username}</span>
+                    </div>
+                    <div style="margin-top:6px; font-size:12px; color:var(--text-dark-muted);">@${notif.username}</div>
+                    <div style="margin-top:6px; font-size:12px; color:var(--neon-cyan);">📞 ${notif.phone || 'No especificado'}</div>
+                    <div style="margin-top:4px; font-size:12px; color:var(--neon-pink);">📸 ${notif.instagram || 'No especificado'}</div>
                 </td>
                 <td>$${Number(notif.amount).toFixed(2)}</td>
                 <td>${itemsText}</td>
@@ -160,6 +194,7 @@ function renderizarNotificaciones() {
                 <td><span class="badge ${notif.status === 'Procesado' ? 'disponible' : 'agotado'}">${notif.status}</span></td>
                 <td style="display:flex; gap:8px; flex-wrap:wrap;">
                     <button class="btn-primary-neon" type="button" onclick="cargarSolicitudEnPedido(${notif.id})">Cargar al pedido</button>
+                    <button class="btn-secondary-neon" type="button" onclick="convertirSolicitudRapida(${notif.id})">➡️ Convertir rápido</button>
                     <button class="btn-danger" type="button" onclick="descartarSolicitud(${notif.id})">Descartar</button>
                 </td>
             </tr>
@@ -167,7 +202,7 @@ function renderizarNotificaciones() {
     });
 }
 
-function solicitarPedidoAdmin() {
+async function solicitarPedidoAdmin() {
     if (!authState.user) {
         showNotification('Inicia sesión para enviar tu pedido', 'error');
         return;
@@ -179,44 +214,54 @@ function solicitarPedidoAdmin() {
 
     const phone = document.getElementById('cesta-telefono')?.value.trim() || '';
     const instagram = document.getElementById('cesta-instagram')?.value.trim() || '';
-
-    if (!phone) {
-        showNotification('Ingresa un teléfono de contacto antes de enviar el pedido', 'error');
-        return;
-    }
-
     const total = cestaActual.reduce((acc, item) => acc + item.subtotal, 0);
-    const orderData = {
+
+    const notificacion = {
+        username: authState.user.username,
         customerName: authState.user.fullName || authState.user.username,
         phone,
         instagram,
-        date: new Date().toISOString().split('T')[0],
-        status: 'Pendiente',
-        total,
+        amount: total,
+        items: cestaActual.map(item => ({ idProducto: item.idProducto, nombre: item.nombre, cantidad: item.cantidad, precioUnitario: item.precioUnitario }))
     };
 
-    registrarOrdenBackend(orderData);
+    const sendBtn = document.getElementById('cesta-enviar-btn');
+    const sendText = document.getElementById('cesta-enviar-text');
+    const sendSpinner = document.getElementById('cesta-enviar-spinner');
+    if (sendBtn) sendBtn.classList.add('loading');
+    if (sendSpinner) sendSpinner.classList.remove('hidden');
+    if (sendText) sendText.textContent = 'Enviando...';
+
+    try {
+        const resp = await fetch('/api/requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ customerName: notificacion.customerName, phone: notificacion.phone, instagram: notificacion.instagram, items: notificacion.items, total: notificacion.amount })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            showNotification(data.message || 'No se pudo enviar la solicitud', 'error');
+            return;
+        }
+        // locally clear basket and update UI
+        cestaActual = [];
+        guardarCestaLocal();
+        renderizarCesta();
+        showNotification('Solicitud enviada al administrador correctamente');
+    } catch (err) {
+        showNotification('Error de conexión al enviar la solicitud', 'error');
+    } finally {
+        if (sendBtn) sendBtn.classList.remove('loading');
+        if (sendSpinner) sendSpinner.classList.add('hidden');
+        if (sendText) sendText.textContent = '✉️ Enviar solicitud de pedido';
+    }
 }
 
 async function cargarSolicitudEnPedido(idSolicitud) {
     const solicitud = notificacionesPedidos.find(item => item.id === idSolicitud);
     if (!solicitud) {
         showNotification('Solicitud no encontrada', 'error');
-        return;
-    }
-
-    if (authState.user?.role === 'admin') {
-        solicitudPedidoActual = idSolicitud;
-        carritoActual = solicitud.items.map(item => ({ ...item }));
-        renderizarCarrito();
-        await registrarOrdenBackend({
-            customerName: solicitud.customerName,
-            phone: solicitud.phone,
-            instagram: solicitud.instagram,
-            date: new Date().toISOString().split('T')[0],
-            status: 'Pendiente',
-            total: solicitud.amount
-        });
         return;
     }
 
@@ -531,8 +576,8 @@ function renderizarTiendaProductos(lista) {
                 </select>
                 <div class="product-actions">
                     <div style="display:flex; gap:10px;">
-                        <input type="number" min="1" max="${prod.stock}" value="1" id="qty-${prod.id}" style="width:70px;" />
-                        <button class="btn-add-cart" onclick="agregarProductoAlPedidoDesdeTienda(${prod.id})">Agregar</button>
+                        <input type="number" min="1" max="${prod.stock}" value="1" id="tienda-qty-${prod.id}" style="width:70px;" />
+                        <button class="btn-add-cart" onclick="agregarProductoAlPedidoDesdeTienda(${prod.id}, 'tienda-qty-${prod.id}')">Agregar</button>
                     </div>
                 </div>
             </div>
@@ -541,8 +586,8 @@ function renderizarTiendaProductos(lista) {
     });
 }
 
-async function agregarProductoAlPedidoDesdeTienda(productId) {
-    const cantidad = parseInt(document.getElementById(`qty-${productId}`).value, 10) || 1;
+async function agregarProductoAlPedidoDesdeTienda(productId, qtyInputId = `qty-${productId}`) {
+    const cantidad = parseInt(document.getElementById(qtyInputId)?.value, 10) || 1;
     const prod = productos.find(p => p.id === productId);
     if (!prod) {
         showNotification('Producto no encontrado', 'error');
@@ -603,6 +648,13 @@ async function mostrarApp() {
     cargarCestaLocal();
     cargarNotificacionesLocal();
     cargarProductos();
+    // Start polling notifications for admins so all admins see requests promptly
+    if (authState.user?.role === 'admin') {
+        if (notificacionesPolling) clearInterval(notificacionesPolling);
+        notificacionesPolling = setInterval(cargarNotificacionesLocal, 5000);
+    } else {
+        if (notificacionesPolling) { clearInterval(notificacionesPolling); notificacionesPolling = null; }
+    }
     if (authState.user.role === 'admin') {
         await cargarOrdenes();
     }
@@ -905,8 +957,8 @@ function renderizarProductosDeSeccion() {
             <div class="product-price">$${Number(prod.precio).toFixed(2)}</div>
             <div class="form-actions" style="margin-top: 15px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                 <div class="user-only hidden" style="display:flex; gap:10px; align-items:center; flex:1;">
-                    <input type="number" id="qty-${prod.id}" min="1" max="${prod.stock}" value="1" style="width:70px; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-dark-input); color:var(--text-main);" ${prod.stock <= 0 ? 'disabled' : ''} />
-                    <button type="button" class="btn-add-cart" onclick="agregarProductoAlPedidoDesdeTienda(${prod.id})" ${prod.stock <= 0 ? 'disabled' : ''}>Agregar a la cesta</button>
+                    <input type="number" id="section-qty-${prod.id}" min="1" max="${prod.stock}" value="1" style="width:70px; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-dark-input); color:var(--text-main);" ${prod.stock <= 0 ? 'disabled' : ''} />
+                    <button type="button" class="btn-add-cart" onclick="agregarProductoAlPedidoDesdeTienda(${prod.id}, 'section-qty-${prod.id}')" ${prod.stock <= 0 ? 'disabled' : ''}>Agregar a la cesta</button>
                 </div>
                 <div class="form-actions" style="display:flex; gap:10px;">
                     <button class="btn-secondary-neon admin-only hidden" style="padding:6px 12px; font-size:12px; flex:1;" onclick="cargarProductoParaEditar(${prod.id})">⚙️ Editar</button>
@@ -1120,10 +1172,12 @@ async function guardarPedido(e) {
         return;
     }
 
-    registrarOrdenBackend({ customerName, phone, instagram, date, status, total });
+    const payload = { customerName, phone, instagram, date, status, total };
+    if (solicitudPedidoActual) payload.requestId = solicitudPedidoActual;
+    registrarOrdenBackend(payload, carritoActual);
 }
 
-async function registrarOrdenBackend(orderData) {
+async function registrarOrdenBackend(orderData, orderItems = carritoActual) {
     try {
         const response = await fetch('/api/orders', {
             method: 'POST',
@@ -1131,7 +1185,7 @@ async function registrarOrdenBackend(orderData) {
             credentials: 'include',
             body: JSON.stringify({
                 ...orderData,
-                items: carritoActual.map(item => ({
+                items: orderItems.map(item => ({
                     productId: item.idProducto,
                     quantity: item.cantidad,
                     price: item.precioUnitario
@@ -1146,15 +1200,18 @@ async function registrarOrdenBackend(orderData) {
 
         showNotification('Orden registrada correctamente');
         if (solicitudPedidoActual) {
-            notificacionesPedidos = notificacionesPedidos.filter(item => item.id !== solicitudPedidoActual);
             solicitudPedidoActual = null;
-            guardarNotificacionesLocal();
-            actualizarBadgeNotificaciones();
-            renderizarNotificaciones();
+            // refresh admin notifications from server
+            await cargarNotificacionesLocal();
         }
         carritoActual = [];
+        if (orderItems === cestaActual) {
+            cestaActual = [];
+            guardarCestaLocal();
+        }
         document.getElementById('form-pedido').reset();
         renderizarCarrito();
+        renderizarCesta();
         configurarFechaActual();
         await cargarProductos();
         if (authState.user?.role === 'admin') {
@@ -1245,4 +1302,25 @@ async function eliminarOrden(id) {
     } catch (err) {
         showNotification('Error de conexión con el servidor', 'error');
     }
+}
+
+async function convertirSolicitudRapida(idSolicitud) {
+    const solicitud = notificacionesPedidos.find(item => item.id === idSolicitud);
+    if (!solicitud) {
+        showNotification('Solicitud no encontrada', 'error');
+        return;
+    }
+    // build order items in the format expected by registrarOrdenBackend
+    const orderItems = (solicitud.items || []).map(i => ({ idProducto: i.idProducto, cantidad: i.cantidad, precioUnitario: i.precioUnitario }));
+    const payload = {
+        customerName: solicitud.customerName,
+        phone: solicitud.phone || '',
+        instagram: solicitud.instagram || '',
+        date: new Date().toISOString().split('T')[0],
+        status: 'Pendiente',
+        total: solicitud.amount || orderItems.reduce((s, it) => s + (Number(it.precioUnitario || 0) * Number(it.cantidad || 1)), 0),
+        requestId: solicitud.id
+    };
+    // call existing backend order registrar which will delete the request
+    await registrarOrdenBackend(payload, orderItems);
 }

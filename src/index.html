@@ -84,7 +84,7 @@
             
             <nav class="nav-container">
                 <button class="nav-home-btn" onclick="ejecutarAccionPestana('inicio')">🏠 Inicio</button>
-                <button class="nav-home-btn customer-only hidden" onclick="ejecutarAccionPestana('tienda')">🛍️ Tienda</button>
+                
                 <button class="nav-home-btn customer-only hidden" onclick="ejecutarAccionPestana('cesta')">🛒 Cesta</button>
                 <button class="nav-home-btn user-only hidden" onclick="ejecutarAccionPestana('megusta')">❤ Me gusta</button>
 
@@ -143,8 +143,8 @@
                     <h1 class="hero-title">BIENVENIDO AL CENTRO DE CONTROL</h1>
                     <p class="hero-subtitle">Gestiona tu inventario exclusivo, procesa órdenes en tiempo real y monitorea el flujo de mercancía con una interfaz optimizada de alta velocidad.</p>
                     <div class="hero-actions">
-                        <button class="btn-hero-primary customer-only hidden" onclick="ejecutarAccionSeccion('Anillos')">Ver Mercancía 📦</button>
-                            <button class="btn-hero-secondary customer-only hidden" onclick="ejecutarAccionPestana('pedidos')">Registrar Pedido 🛒</button>
+                        <button class="btn-hero-primary admin-only hidden" onclick="ejecutarAccionSeccion('Anillos')">Ver Mercancía 📦</button>
+                            <button class="btn-hero-secondary admin-only hidden" onclick="ejecutarAccionPestana('pedidos')">Registrar Pedido 🛒</button>
                         <button class="btn-hero-primary customer-only hidden" onclick="showNotification('Usa el menú Mercancía para explorar nuestras joyas', 'success')">Explora nuestra joyería</button>
                         <button class="btn-hero-secondary customer-only hidden" onclick="showNotification('Próximamente lanzaremos ofertas especiales para clientes', 'success')">Promociones exclusivas</button>
                     </div>
@@ -191,7 +191,7 @@
             </section>
             
             <!-- TIENDA DE CLIENTE -->
-            <section id="pestana-tienda" class="tab-content customer-only hidden">
+            <section id="pestana-tienda" class="tab-content admin-only hidden">
                 <div class="header-section">
                     <h1 class="neon-text-blue">Tienda Neon Store</h1>
                     <p>Explora productos personalizados, elige variante, color y agrega al carrito.</p>
@@ -426,7 +426,10 @@
                         </div>
                     </div>
                     <div style="display:flex; justify-content:flex-end; margin-top:20px;">
-                        <button type="button" class="btn-primary-neon customer-only hidden" onclick="solicitarPedidoAdmin()">✉️ Enviar solicitud de pedido</button>
+                        <button type="button" id="cesta-enviar-btn" class="btn-primary-neon customer-only hidden" onclick="solicitarPedidoAdmin()">
+                            <span id="cesta-enviar-text">✉️ Enviar solicitud de pedido</span>
+                            <span id="cesta-enviar-spinner" class="btn-spinner hidden" aria-hidden="true"></span>
+                        </button>
                     </div>
                 </div>
             </section>
