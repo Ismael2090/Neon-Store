@@ -1,4 +1,11 @@
 {
+  "name": "neon-store",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js",
+    "start:dev": "PORT=3001 node src/server.js"
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",

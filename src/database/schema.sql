@@ -41,10 +41,23 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT,
   full_name TEXT NOT NULL,
   photo_url TEXT,
+  phone TEXT,
+  role TEXT NOT NULL DEFAULT 'customer',
   provider TEXT NOT NULL DEFAULT 'local',
   provider_id TEXT,
   created_at DATETIME DEFAULT (datetime('now')),
   UNIQUE(provider, provider_id)
+);
+
+CREATE TABLE IF NOT EXISTS likes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  is_public INTEGER NOT NULL DEFAULT 1,
+  created_at DATETIME DEFAULT (datetime('now')),
+  UNIQUE(user_id, product_id),
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_provider ON users(provider);

@@ -53,9 +53,9 @@ db.serialize(() => {
 
       if (row && row.cnt === 0) {
         const passwordHash = bcrypt.hashSync('Neon1234', 10);
-        const insertUser = db.prepare('INSERT INTO users (username, password_hash, full_name, photo_url, provider) VALUES (?, ?, ?, ?, ?)');
-        insertUser.run('neonadmin', passwordHash, 'Administrador Neon', '', 'local');
-        insertUser.finalize(() => console.log('Usuario de ejemplo creado: neonadmin / Neon1234'));
+        const insertUser = db.prepare('INSERT INTO users (username, password_hash, full_name, photo_url, role, provider) VALUES (?, ?, ?, ?, ?, ?)');
+        insertUser.run('Ismael2090', passwordHash, 'Administrador Neon', '', 'admin', 'local');
+        insertUser.finalize(() => console.log('Usuario de ejemplo creado: Ismael2090 / Neon1234'));
       } else {
         console.log('Usuarios existentes, no se creó el usuario de ejemplo.');
       }

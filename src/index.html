@@ -54,6 +54,10 @@
                         <input type="password" id="register-password" required placeholder="Contraseña segura">
                     </div>
                     <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="tel" id="register-phone" placeholder="Ej. 809-555-0199">
+                    </div>
+                    <div class="form-group">
                         <label>URL de foto de perfil</label>
                         <input type="text" id="register-photo" placeholder="Opcional">
                     </div>
@@ -71,6 +75,7 @@
     </div>
 
     <div class="app-container hidden">
+        <div id="app-toast" class="app-toast hidden"></div>
         <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
         <header class="top-navbar">
             <div class="logo-section" onclick="ejecutarAccionPestana('inicio')" style="cursor: pointer;">
@@ -79,6 +84,9 @@
             
             <nav class="nav-container">
                 <button class="nav-home-btn" onclick="ejecutarAccionPestana('inicio')">🏠 Inicio</button>
+                <button class="nav-home-btn customer-only hidden" onclick="ejecutarAccionPestana('tienda')">🛍️ Tienda</button>
+                <button class="nav-home-btn customer-only hidden" onclick="ejecutarAccionPestana('cesta')">🛒 Cesta</button>
+                <button class="nav-home-btn user-only hidden" onclick="ejecutarAccionPestana('megusta')">❤ Me gusta</button>
 
                 <!-- SUBMENÚ 1: MERCANCÍA -->
                 <div class="dropdown">
@@ -91,6 +99,25 @@
                     </div>
                 </div>
 
+                <!-- SUBMENÚ 2: OPERACIONES -->
+                <div class="dropdown admin-only hidden">
+                    <button class="dropdown-btn" onclick="toggleDropdown('drop-operaciones')">⚙️ Operaciones ▼</button>
+                    <div id="drop-operaciones" class="dropdown-content">
+                        <a href="#" onclick="ejecutarAccionPestana('nuevo-producto')">➕ Agregar Artículo</a>
+                        <a href="#" onclick="ejecutarAccionPestana('pedidos')">🛒 Registrar Pedido</a>
+                        <a href="#" onclick="ejecutarAccionPestana('historial')">📋 Historial de Órdenes</a>
+                        <a href="#" onclick="ejecutarAccionPestana('admin-ajustes')">⚙️ Ajustes admin</a>
+                    </div>
+                </div>
+
+                <!-- SUBMENÚ 3: NOTIFICACIONES ADMIN -->
+                <div class="dropdown admin-only hidden">
+                    <button class="dropdown-btn" onclick="toggleDropdown('drop-notificaciones')">🔔 Notificaciones ▼ <span id="notificacion-count" class="badge hidden">0</span></button>
+                    <div id="drop-notificaciones" class="dropdown-content">
+                        <a href="#" onclick="ejecutarAccionPestana('notificaciones')">🔔 Solicitudes de pedido</a>
+                    </div>
+                </div>
+
                 <!-- PERFIL DE USUARIO -->
                 <div class="user-profile-widget" id="user-profile-widget">
                     <div class="profile-thumb-wrapper">
@@ -100,18 +127,7 @@
                         <span id="profile-name">Invitado</span>
                         <div class="profile-actions-top">
                             <button class="btn-secondary-neon btn-small" type="button" onclick="toggleProfileEditor()">Editar perfil</button>
-                            <button class="btn-secondary-neon btn-small" type="button" onclick="logout()">Salir</button>
                         </div>
-                    </div>
-                </div>
-
-                <!-- SUBMENÚ 2: OPERACIONES -->
-                <div class="dropdown">
-                    <button class="dropdown-btn" onclick="toggleDropdown('drop-operaciones')">⚙️ Operaciones ▼</button>
-                    <div id="drop-operaciones" class="dropdown-content">
-                        <a href="#" onclick="ejecutarAccionPestana('nuevo-producto')">➕ Agregar Artículo</a>
-                        <a href="#" onclick="ejecutarAccionPestana('pedidos')">🛒 Registrar Pedido</a>
-                        <a href="#" onclick="ejecutarAccionPestana('historial')">📋 Historial de Órdenes</a>
                     </div>
                 </div>
             </nav>
@@ -127,27 +143,44 @@
                     <h1 class="hero-title">BIENVENIDO AL CENTRO DE CONTROL</h1>
                     <p class="hero-subtitle">Gestiona tu inventario exclusivo, procesa órdenes en tiempo real y monitorea el flujo de mercancía con una interfaz optimizada de alta velocidad.</p>
                     <div class="hero-actions">
-                        <button class="btn-hero-primary" onclick="ejecutarAccionSeccion('Anillos')">Ver Mercancía 📦</button>
-                        <button class="btn-hero-secondary" onclick="ejecutarAccionPestana('pedidos')">Registrar Pedido 🛒</button>
+                        <button class="btn-hero-primary customer-only hidden" onclick="ejecutarAccionSeccion('Anillos')">Ver Mercancía 📦</button>
+                            <button class="btn-hero-secondary customer-only hidden" onclick="ejecutarAccionPestana('pedidos')">Registrar Pedido 🛒</button>
+                        <button class="btn-hero-primary customer-only hidden" onclick="showNotification('Usa el menú Mercancía para explorar nuestras joyas', 'success')">Explora nuestra joyería</button>
+                        <button class="btn-hero-secondary customer-only hidden" onclick="showNotification('Próximamente lanzaremos ofertas especiales para clientes', 'success')">Promociones exclusivas</button>
+                    </div>
+
+                    <div class="customer-highlights customer-only hidden">
+                        <div class="highlight-card">
+                            <h3>Joyas hechas a mano</h3>
+                            <p>Cada pieza se crea con precisión y pasión, combinando diseño moderno con elegancia atemporal.</p>
+                        </div>
+                        <div class="highlight-card">
+                            <h3>Brillo exclusivo</h3>
+                            <p>Encuentra gemas únicas, acabados personalizados y detalles luminosos para destacar en cualquier ocasión.</p>
+                        </div>
+                        <div class="highlight-card">
+                            <h3>Entrega express</h3>
+                            <p>Envíos rápidos y seguros para que tus nuevas joyas lleguen listas para brillar.</p>
+                        </div>
                     </div>
                 </div>
 
                 <div class="dashboard-stats-grid">
-                    <div class="stat-glass-card" onclick="ejecutarAccionPestana('historial')">
+                    <div class="stat-glass-card admin-only hidden" onclick="ejecutarAccionPestana('historial')">
                         <div class="stat-icon pink">📊</div>
                         <div class="stat-info">
                             <span id="stat-total-pedidos">0</span>
                             <p>Órdenes Registradas</p>
                         </div>
                     </div>
-                    <div class="stat-glass-card">
+                    <div class="stat-glass-card admin-only hidden">
                         <div class="stat-icon green">💰</div>
                         <div class="stat-info">
                             <span id="stat-ingresos-totales">$0.00</span>
                             <p>Ingresos Generados</p>
                         </div>
                     </div>
-                    <div class="stat-glass-card">
+                    <div class="stat-glass-card admin-only hidden">
                         <div class="stat-icon cyan">⚡</div>
                         <div class="stat-info">
                             <span id="stat-total-productos">0</span>
@@ -157,6 +190,31 @@
                 </div>
             </section>
             
+            <!-- TIENDA DE CLIENTE -->
+            <section id="pestana-tienda" class="tab-content customer-only hidden">
+                <div class="header-section">
+                    <h1 class="neon-text-blue">Tienda Neon Store</h1>
+                    <p>Explora productos personalizados, elige variante, color y agrega al carrito.</p>
+                </div>
+                <div class="client-toolbar">
+                    <div class="form-group" style="max-width: 260px;">
+                        <label>Buscar producto</label>
+                        <input type="text" id="tienda-busqueda" oninput="filtrarTienda()" placeholder="Buscar por nombre o categoría">
+                    </div>
+                    <div class="form-group" style="max-width: 220px;">
+                        <label>Filtrar por categoría</label>
+                        <select id="tienda-categoria" onchange="filtrarTienda()">
+                            <option value="">Todas</option>
+                            <option value="Anillos">Anillos</option>
+                            <option value="Collares">Collares</option>
+                            <option value="Pulseras">Pulseras</option>
+                            <option value="Posters Anime">Posters Anime</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="tienda-productos-grid" class="client-products-grid"></div>
+            </section>
+
             <!-- SECCIONES DE ARTÍCULOS -->
             <section id="pestana-secciones" class="tab-content">
                 <div id="banner-representativo" class="category-banner">
@@ -290,6 +348,28 @@
             </section>
 
             <!-- HISTORIAL DE PEDIDOS -->
+            <section id="pestana-notificaciones" class="tab-content">
+                <div class="header-section">
+                    <h1 class="neon-text-yellow">Notificaciones de Pedido</h1>
+                    <p>Revisa las solicitudes entrantes y carga el pedido directamente en el formulario de registro.</p>
+                </div>
+                <div class="table-container">
+                    <table class="neon-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Monto Solicitud</th>
+                                <th>Objetos</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="notificaciones-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
             <section id="pestana-historial" class="tab-content">
                 <div class="header-section">
                     <h1 class="neon-text-green">Historial General de Órdenes</h1>
@@ -312,7 +392,81 @@
                 </div>
             </section>
 
+            <!-- CESTA DEL CLIENTE -->
+            <section id="pestana-cesta" class="tab-content">
+                <div class="header-section">
+                    <h1 class="neon-text-blue">Tu Cesta</h1>
+                    <p>Revisa los productos guardados y envía tu pedido cuando estés listo.</p>
+                </div>
+                <div class="table-container">
+                    <table class="neon-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Precio unitario</th>
+                                <th>Cantidad</th>
+                                <th>Subtotal</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cesta-body"></tbody>
+                    </table>
+                    <div class="total-box" style="justify-content:flex-end; margin-top:20px;">
+                        <span>Total de la cesta:</span>
+                        <span id="cesta-total" class="neon-text-green">$0.00</span>
+                    </div>
+                    <div class="form-row" style="justify-content:flex-end; gap:16px; margin-top:20px; flex-wrap:wrap;">
+                        <div class="form-group" style="flex:1; min-width:240px;">
+                            <label>Teléfono de contacto</label>
+                            <input type="tel" id="cesta-telefono" class="customer-only hidden" placeholder="Ej. 809-555-0199" />
+                        </div>
+                        <div class="form-group" style="flex:1; min-width:240px;">
+                            <label>Instagram (opcional)</label>
+                            <input type="text" id="cesta-instagram" class="customer-only hidden" placeholder="Ej. @usuario" />
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+                        <button type="button" class="btn-primary-neon customer-only hidden" onclick="solicitarPedidoAdmin()">✉️ Enviar solicitud de pedido</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ME GUSTA -->
+            <section id="pestana-megusta" class="tab-content">
+                <div class="header-section">
+                    <h1 class="neon-text-pink">Productos que te Gustan</h1>
+                    <p>Encuentra los productos que guardaste con ❤️ en tu perfil.</p>
+                </div>
+                <div class="products-grid" id="megusta-grid"></div>
+            </section>
+
+            <!-- AJUSTES ADMIN -->
+            <section id="pestana-admin-ajustes" class="tab-content">
+                <div class="header-section">
+                    <h1 class="neon-text-cyan">Ajustes Admin</h1>
+                    <p>Busca usuarios registrados, revisa su información y cambia roles cuando sea necesario.</p>
+                </div>
+                <div class="form-container">
+                    <form id="admin-search-form" onsubmit="buscarUsuarioAdmin(event)">
+                        <div class="form-row" style="gap: 20px; align-items: flex-end;">
+                            <div class="form-group" style="flex: 1;">
+                                <label>Buscar usuario por nombre</label>
+                                <input type="text" id="admin-search-username" placeholder="Usuario registrado" required>
+                            </div>
+                            <button type="submit" class="btn-primary-neon">Buscar</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="admin-user-detail" class="admin-user-detail hidden"></div>
+            </section>
+
         </main>
+        <footer class="app-footer">
+            <div class="footer-content">
+                <p>NEON STORE - Emprendimiento de joyería artesanal con estilo futurista.</p>
+                <p>Calidad premium, diseños exclusivos y envíos rápidos. Síguenos para novedades, ediciones limitadas y piezas únicas.</p>
+            </div>
+        </footer>
     </div>
     <div id="profile-editor-panel" class="profile-editor-panel hidden">
         <div class="profile-editor-card">
@@ -330,8 +484,24 @@
                     <input type="text" id="profile-fullname-edit" required>
                 </div>
                 <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="profile-phone-edit" placeholder="Ej. 809-555-0199">
+                </div>
+                <div class="form-group">
                     <label>URL de foto de perfil</label>
                     <input type="text" id="profile-photo-edit" placeholder="https://...">
+                </div>
+                <hr style="margin:14px 0; border-color: rgba(255,255,255,0.04);" />
+                <h3 style="margin-bottom:8px;">Seguridad</h3>
+                <div class="form-group">
+                    <label>Cambiar contraseña (opcional)</label>
+                    <input type="password" id="profile-new-password" placeholder="Nueva contraseña">
+                </div>
+                <div class="form-group" style="margin-bottom:6px;">
+                    <small style="color:var(--text-dark-muted);">Botón de cerrar sesión dentro de seguridad (menos visible).</small>
+                </div>
+                <div class="profile-security">
+                    <button type="button" class="btn-logout" onclick="logout()">Cerrar sesión</button>
                 </div>
                 <div id="profile-error" class="auth-error"></div>
                 <div class="profile-actions">
