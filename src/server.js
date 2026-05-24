@@ -55,37 +55,10 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// DEBUG: simple handler to confirm /api/requests reaches the server
-app.post('/api/requests', (req, res) => {
-  console.log('[DEBUG] received /api/requests');
-  res.json({ status: 'debug', message: 'route received' });
-});
-
 // Security: hide framework fingerprint
 app.disable('x-powered-by');
 
-// Early handler for /requests to ensure client posts are accepted (duplicates allowed)
-app.post('/requests', async (req, res, next) => {
-  try {
-    if (!req.isAuthenticated || !req.isAuthenticated()) {
-      return res.status(401).json({ status: 'error', message: 'No autorizado' });
-    }
-    const { customerName, phone, instagram, items, total } = req.body;
-    if (!customerName || !items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ status: 'error', message: 'Solicitud inválida' });
-    }
-    const insertReq = await run('INSERT INTO order_requests (user_id, username, customer_name, phone, instagram, amount) VALUES (?, ?, ?, ?, ?, ?)',
-      [req.user.id, req.user.username, customerName, phone || '', instagram || '', Number(total) || 0]);
-    const requestId = insertReq.id;
-    await Promise.all((items || []).map(async (it) => {
-      await run('INSERT INTO order_request_items (request_id, product_id, nombre, quantity, price) VALUES (?, ?, ?, ?, ?)',
-        [requestId, it.idProducto || it.productId, it.nombre || '', Number(it.cantidad || it.quantity || 1), Number(it.precioUnitario || it.price || 0)]);
-    }));
-    res.json({ status: 'success', requestId });
-  } catch (err) {
-    next(err);
-  }
-});
+
 
 // Prevent exposing server source files, DB files or other sensitive assets
 const forbiddenPaths = ['/server.js', '/package.json', '/package-lock.json', '/.env'];
@@ -478,64 +451,106 @@ app.post('/api/orders', ensureAuthenticated, async (req, res, next) => {
 app.post('/api/requests', ensureAuthenticated, async (req, res, next) => {
   try {
     const { customerName, phone, instagram, items, total } = req.body;
+    console.log('[POST /api/requests] Recibido:', { customerName, phone, instagram, itemsCount: items?.length, total });
+    
     if (!customerName || !items || !Array.isArray(items) || items.length === 0) {
+      console.warn('[POST /api/requests] Validación fallida - datos incompletos');
       return res.status(400).json({ status: 'error', message: 'Solicitud inválida' });
     }
+    
     const insertReq = await run('INSERT INTO order_requests (user_id, username, customer_name, phone, instagram, amount) VALUES (?, ?, ?, ?, ?, ?)',
       [req.user.id, req.user.username, customerName, phone || '', instagram || '', Number(total) || 0]);
+    
     const requestId = insertReq.id;
+    console.log('[POST /api/requests] Solicitud insertada con ID:', requestId);
+    
+    if (!requestId) {
+      console.error('[POST /api/requests] ERROR: No se obtuvo ID válido de la inserción');
+      return res.status(500).json({ status: 'error', message: 'Error al crear la solicitud' });
+    }
+    
     await Promise.all((items || []).map(async (it) => {
+      console.log('[POST /api/requests] Insertando item:', { requestId, productId: it.idProducto || it.productId, nombre: it.nombre, cantidad: it.cantidad || it.quantity });
       await run('INSERT INTO order_request_items (request_id, product_id, nombre, quantity, price) VALUES (?, ?, ?, ?, ?)',
         [requestId, it.idProducto || it.productId, it.nombre || '', Number(it.cantidad || it.quantity || 1), Number(it.precioUnitario || it.price || 0)]);
     }));
+    
+    console.log('[POST /api/requests] Solicitud completada exitosamente:', requestId);
     res.json({ status: 'success', requestId });
   } catch (err) {
+    console.error('[POST /api/requests] ERROR:', err);
     next(err);
   }
 });
 
-// Alternate routes (without /api) to support clients that hit '/requests'
+// Alternate route (without /api) redirects to /api/requests
 app.post('/requests', ensureAuthenticated, async (req, res, next) => {
   try {
     const { customerName, phone, instagram, items, total } = req.body;
+    console.log('[POST /requests] Recibido:', { customerName, phone, instagram, itemsCount: items?.length, total });
+    
     if (!customerName || !items || !Array.isArray(items) || items.length === 0) {
+      console.warn('[POST /requests] Validación fallida');
       return res.status(400).json({ status: 'error', message: 'Solicitud inválida' });
     }
+    
     const insertReq = await run('INSERT INTO order_requests (user_id, username, customer_name, phone, instagram, amount) VALUES (?, ?, ?, ?, ?, ?)',
       [req.user.id, req.user.username, customerName, phone || '', instagram || '', Number(total) || 0]);
     const requestId = insertReq.id;
+    
+    console.log('[POST /requests] Solicitud insertada con ID:', requestId);
+    
+    if (!requestId) {
+      console.error('[POST /requests] ERROR: No se obtuvo ID válido');
+      return res.status(500).json({ status: 'error', message: 'Error al crear la solicitud' });
+    }
+    
     await Promise.all((items || []).map(async (it) => {
       await run('INSERT INTO order_request_items (request_id, product_id, nombre, quantity, price) VALUES (?, ?, ?, ?, ?)',
         [requestId, it.idProducto || it.productId, it.nombre || '', Number(it.cantidad || it.quantity || 1), Number(it.precioUnitario || it.price || 0)]);
     }));
+    
+    console.log('[POST /requests] Solicitud completada');
     res.json({ status: 'success', requestId });
   } catch (err) {
+    console.error('[POST /requests] ERROR:', err);
     next(err);
   }
 });
 
 app.get('/api/requests', ensureAdmin, async (req, res, next) => {
   try {
+    console.log('[GET /api/requests] Admin:', req.user?.username);
     const requests = await all('SELECT * FROM order_requests ORDER BY created_at DESC');
+    console.log('[GET /api/requests] Solicitudes encontradas:', requests.length);
+    
     const withItems = await Promise.all(requests.map(async (r) => {
       const items = await all('SELECT * FROM order_request_items WHERE request_id = ?', [r.id]);
+      console.log('[GET /api/requests] Solicitud ID', r.id, 'con', items.length, 'items');
       return { ...r, items };
     }));
+    
     res.json({ status: 'success', requests: withItems });
   } catch (err) {
+    console.error('[GET /api/requests] ERROR:', err);
     next(err);
   }
 });
 
 app.get('/requests', ensureAdmin, async (req, res, next) => {
   try {
+    console.log('[GET /requests] Admin:', req.user?.username);
     const requests = await all('SELECT * FROM order_requests ORDER BY created_at DESC');
+    console.log('[GET /requests] Solicitudes encontradas:', requests.length);
+    
     const withItems = await Promise.all(requests.map(async (r) => {
       const items = await all('SELECT * FROM order_request_items WHERE request_id = ?', [r.id]);
       return { ...r, items };
     }));
+    
     res.json({ status: 'success', requests: withItems });
   } catch (err) {
+    console.error('[GET /requests] ERROR:', err);
     next(err);
   }
 });
@@ -697,21 +712,6 @@ try {
   console.warn('No se pudieron listar rutas antes de 404:', e);
 }
 
-// 404 handler
-app.use((req, res, next) => {
-  const error = new Error('Ruta no encontrada');
-  error.status = 404;
-  next(error);
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-  res.status(err.status || 500).json({
-    status: 'error',
-    message: err.message || 'Error interno del servidor',
-  });
-});
-
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });
@@ -726,6 +726,61 @@ app.get('/debug/routes', (req, res) => {
   } catch (e) {
     return res.status(500).json({ status: 'error', message: 'No se pudieron obtener rutas' });
   }
+});
+
+// Endpoint para diagnosticar estado del usuario actual
+app.get('/debug/user', (req, res) => {
+  try {
+    const isAuth = req.isAuthenticated && req.isAuthenticated();
+    console.log('[/debug/user] isAuthenticated:', isAuth, 'user:', req.user);
+    res.json({ 
+      status: 'success', 
+      isAuthenticated: isAuth, 
+      user: req.user || null,
+      role: req.user?.role || 'none'
+    });
+  } catch (e) {
+    return res.status(500).json({ status: 'error', message: 'Error en diagnóstico' });
+  }
+});
+
+// Endpoint para ver todas las solicitudes (cualquier usuario autenticado)
+app.get('/debug/requests', ensureAuthenticated, async (req, res, next) => {
+  try {
+    console.log('[/debug/requests] Usuario:', req.user?.username, 'Rol:', req.user?.role);
+    const requests = await all('SELECT * FROM order_requests ORDER BY created_at DESC');
+    console.log('[/debug/requests] Total de solicitudes:', requests.length);
+    
+    const withItems = await Promise.all(requests.map(async (r) => {
+      const items = await all('SELECT * FROM order_request_items WHERE request_id = ?', [r.id]);
+      return { ...r, items };
+    }));
+    
+    res.json({ 
+      status: 'success', 
+      totalRequests: requests.length,
+      requests: withItems,
+      currentUser: { username: req.user?.username, role: req.user?.role }
+    });
+  } catch (err) {
+    console.error('[/debug/requests] ERROR:', err);
+    next(err);
+  }
+});
+
+// 404 handler (moved after debug endpoints so they remain reachable)
+app.use((req, res, next) => {
+  const error = new Error('Ruta no encontrada');
+  error.status = 404;
+  next(error);
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  res.status(err.status || 500).json({
+    status: 'error',
+    message: err.message || 'Error interno del servidor',
+  });
 });
 
 // Debug: listar rutas registradas (ayuda a diagnosticar 404 inesperados)

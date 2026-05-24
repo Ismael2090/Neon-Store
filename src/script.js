@@ -107,9 +107,14 @@ function cargarNotificacionesLocal() {
     if (authState.user?.role === 'admin') {
         (async () => {
             try {
+                console.log('[cargarNotificacionesLocal] Admin solicitando notificaciones...');
                 const resp = await fetch('/api/requests', { credentials: 'include' });
+                console.log('[cargarNotificacionesLocal] Respuesta status:', resp.status);
                 const data = await resp.json();
+                console.log('[cargarNotificacionesLocal] Datos recibidos:', data);
+                
                 if (resp.ok && data.requests) {
+                    console.log('[cargarNotificacionesLocal] Procesando', data.requests.length, 'solicitudes');
                     notificacionesPedidos = data.requests.map(r => ({
                         id: r.id,
                         username: r.username,
@@ -122,10 +127,13 @@ function cargarNotificacionesLocal() {
                         status: r.status,
                         createdAt: r.created_at
                     }));
+                    console.log('[cargarNotificacionesLocal] Mapeadas', notificacionesPedidos.length, 'notificaciones');
                 } else {
+                    console.warn('[cargarNotificacionesLocal] Respuesta no ok o sin requests:', data);
                     notificacionesPedidos = [];
                 }
             } catch (err) {
+                console.error('[cargarNotificacionesLocal] Error en fetch:', err);
                 notificacionesPedidos = [];
             }
             actualizarBadgeNotificaciones();
@@ -176,7 +184,7 @@ function renderizarNotificaciones() {
     }
 
     notificacionesPedidos.forEach(notif => {
-        const itemsText = notif.items.map(item => `${item.quantity}x ${item.nombre}`).join('<br>');
+        const itemsText = notif.items.map(item => `${item.cantidad}x ${item.nombre}`).join('<br>');
         tbody.innerHTML += `
             <tr>
                 <td>
@@ -233,23 +241,45 @@ async function solicitarPedidoAdmin() {
     if (sendText) sendText.textContent = 'Enviando...';
 
     try {
+        const payload = { 
+            customerName: notificacion.customerName, 
+            phone: notificacion.phone, 
+            instagram: notificacion.instagram, 
+            items: notificacion.items, 
+            total: notificacion.amount 
+        };
+        
+        console.log('[solicitarPedidoAdmin] Enviando payload:', payload);
+        
         const resp = await fetch('/api/requests', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ customerName: notificacion.customerName, phone: notificacion.phone, instagram: notificacion.instagram, items: notificacion.items, total: notificacion.amount })
+            body: JSON.stringify(payload)
         });
+        
+        console.log('[solicitarPedidoAdmin] Respuesta status:', resp.status);
         const data = await resp.json();
+        console.log('[solicitarPedidoAdmin] Respuesta datos:', data);
+        
         if (!resp.ok) {
             showNotification(data.message || 'No se pudo enviar la solicitud', 'error');
+            console.error('[solicitarPedidoAdmin] Error:', data);
             return;
         }
+        
         // locally clear basket and update UI
         cestaActual = [];
         guardarCestaLocal();
         renderizarCesta();
-        showNotification('Solicitud enviada al administrador correctamente');
+        showNotification('Solicitud enviada al administrador correctamente ✓');
+        
+        // Actualizar notificaciones inmediatamente
+        if (authState.user?.role === 'admin') {
+            await cargarNotificacionesLocal();
+        }
     } catch (err) {
+        console.error('[solicitarPedidoAdmin] Error de conexión:', err);
         showNotification('Error de conexión al enviar la solicitud', 'error');
     } finally {
         if (sendBtn) sendBtn.classList.remove('loading');
